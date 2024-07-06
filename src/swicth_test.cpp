@@ -1,57 +1,48 @@
 #include <M5Stack.h>    // M5Stackライブラリを使いますという宣言です。Core2の場合はM5Core2.hです
+#include <map>
+#include <string>
+
 #include "swicth_test.h"
 
-const int switchPin1 = 21;  // タクトスイッチ1を接続するGPIOピン
-const int switchPin2 = 22;  // タクトスイッチ2を接続するGPIOピン
-const int switchPin3 = 23;  // タクトスイッチ3を接続するGPIOピン
+// スイッチのラベルをキー、GPIOピンを値とする辞書
+std::map<std::string, int> switchPins;
 
-// M5Stackが起動した時に行われる処理を書きます。
+
 void swicth_test_setup() {
-    M5.begin();       // M5Stackの初期化
     M5.Power.begin(); // バッテリーの初期化
+    M5.begin();       // M5Stackの初期化
 
-    // スイッチピンを入力モードに設定し、内部プルアップ抵抗を有効にする
-    pinMode(switchPin1, INPUT_PULLUP);
-    pinMode(switchPin2, INPUT_PULLUP);
-    pinMode(switchPin3, INPUT_PULLUP);
+    switchPins["up"] = 23;
+    switchPins["down"] = 19;
+    switchPins["left"] = 18;
+    switchPins["right"] = 3;
+
+    // 各スイッチピンを入力モードに設定し、内部プルアップ抵抗を有効にする
+    for (const auto& switchPin : switchPins) {
+        pinMode(switchPin.second, INPUT_PULLUP);
+    }
 
     // 画面をクリアして、初期メッセージを表示
     M5.Lcd.clear();
     M5.Lcd.setCursor(0, 0);
     M5.Lcd.setTextSize(2);
-    M5.Lcd.print("Switch State:");
+    M5.Lcd.print("Switch States:");
 }
 
-// 繰り返し行う処理を書きます。今回はないので空欄です。
 void swicth_test_loop() {
-        // スイッチ1の状態をチェック
-    int state1 = digitalRead(switchPin1);
-    if (state1 == LOW) {
-        M5.Lcd.setCursor(0, 30);
-        M5.Lcd.print("Switch 1: Pressed ");
-    } else {
-        M5.Lcd.setCursor(0, 30);
-        M5.Lcd.print("Switch 1: Released");
-    }
-
-    // スイッチ2の状態をチェック
-    int state2 = digitalRead(switchPin2);
-    if (state2 == LOW) {
-        M5.Lcd.setCursor(0, 60);
-        M5.Lcd.print("Switch 2: Pressed ");
-    } else {
-        M5.Lcd.setCursor(0, 60);
-        M5.Lcd.print("Switch 2: Released");
-    }
-
-    // スイッチ3の状態をチェック
-    int state3 = digitalRead(switchPin3);
-    if (state3 == LOW) {
-        M5.Lcd.setCursor(0, 90);
-        M5.Lcd.print("Switch 3: Pressed ");
-    } else {
-        M5.Lcd.setCursor(0, 90);
-        M5.Lcd.print("Switch 3: Released");
+    int line = 1;
+    // 各スイッチの状態をチェックして表示
+    for (const auto& switchPin : switchPins) {
+        int state = digitalRead(switchPin.second);
+        M5.Lcd.setCursor(0, 30 * line);  // 表示位置を調整
+        M5.Lcd.print(switchPin.first.c_str());
+        M5.Lcd.print(": ");
+        if (state == LOW) {
+            M5.Lcd.print("Pressed ");
+        } else {
+            M5.Lcd.print("Released");
+        }
+        line++;
     }
 
     delay(100); // 状態更新のために少し待つ
