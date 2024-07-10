@@ -1,0 +1,42 @@
+#include <M5Stack.h>    // M5Stackライブラリを使いますという宣言です。Core2の場合はM5Core2.hです
+//#include <Encoder.h>
+#include <ESP32Encoder.h>
+
+#include "rotary_encoder_test.h"
+
+// エンコーダオブジェクトの作成
+ESP32Encoder encoder;
+
+int oldPosition  = -999;
+void rotary_encoder_test_setup() {
+  M5.Power.begin(); // バッテリーの初期化
+  M5.begin();
+
+  // ピンモードの設定
+  pinMode(1, INPUT_PULLUP); // 内部プルアップ抵抗の設定
+  pinMode(17, INPUT_PULLUP); // 内部プルアップ抵抗の設定
+
+  // エンコーダの初期化
+  encoder.attachSingleEdge(1, 17); // A相とB相のピンを指定
+  encoder.clearCount(); // カウンタの初期化
+  
+  // LCDの初期化と基本設定
+  M5.Lcd.clear();
+  M5.Lcd.setCursor(0, 0);
+  M5.Lcd.setTextSize(2);
+  M5.Lcd.setTextColor(TFT_WHITE);
+  M5.Lcd.println("LCD Initialized");
+}
+
+void rotary_encoder_test_loop() {
+  // エンコーダの位置を読み取る
+  long position = encoder.getCount();
+  
+  // エンコーダの位置をディスプレイに出力
+  M5.Lcd.setCursor(10, 50);
+  M5.Lcd.fillRect(10, 50, 200, 20, BLACK);  // 前のテキストを消去するための黒い矩形を描画
+  M5.Lcd.setCursor(10, 50);
+  M5.Lcd.printf("Position: %ld", position);
+
+  delay(100); // ループの待機時間
+}
