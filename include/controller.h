@@ -7,8 +7,8 @@
 #include <ESP32Encoder.h>
 
 struct pinStates {
-    int number;
-    int state;
+    int pin;
+    bool state;
 };
 
 // グローバル変数の宣言

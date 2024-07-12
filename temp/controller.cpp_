@@ -1,0 +1,110 @@
+#include "controller.h"
+
+// グローバル変数の実体定義
+std::map<std::string, pinStates> moveBottons;
+std::map<std::string, pinStates> actionBottons;
+std::map<int, int> switchState;
+ESP32Encoder encoder;
+std::string lastPressedSwitch = "";
+unsigned long lastDebounceTime = 0; // デバウンス用のタイムスタンプ
+const unsigned long debounceDelay = 50; // デバウンスの遅延時間（ミリ秒）
+unsigned long longPressTime = 1000; // 長押しとみなす時間（ミリ秒）
+unsigned long repeatInterval = 300; // 長押し時のリピート間隔（ミリ秒）
+unsigned long pressStartTime = 0;
+
+void setupSwitchPins() {
+    // ピンの番号・状態を、役割をキーとして辞書登録
+    moveBottons["up"] = {3, LOW};       // up
+    moveBottons["down"] = {1, LOW};     // down
+    moveBottons["left"] = {16, LOW};    // left
+    moveBottons["right"] = {17, LOW};   // right
+    actionBottons["select"] = {2, LOW};       // on
+    actionBottons["cancel"] = {5, LOW};      // off
+
+    // 各スイッチピンを入力モードに設定し、内部プルアップ抵抗を有効にする
+    for (const auto& switchPin : moveBottons) {
+        pinMode(switchPin.second.pin, INPUT_PULLUP);
+    }
+    // 各スイッチピンを入力モードに設定し、内部プルアップ抵抗を有効にする
+    for (const auto& actionBotton : actionBottons) {
+        pinMode(actionBotton.second.pin, INPUT_PULLUP);
+    }
+}
+
+std::string getPressedSwitch() {
+    std::string currentPressedSwitch = "";
+    unsigned long currentTime = millis();
+
+    // チャタリング対策としてディレイ時間内の変更を無視する
+    if ((currentTime - lastDebounceTime) > debounceDelay) {
+        // 優先度の高い順にスイッチをチェック
+        if (digitalRead(actionBottons["select"].pin) == LOW) {
+            currentPressedSwitch = "select";
+        } else if (digitalRead(actionBottons["cancel"].pin) == LOW) {
+            currentPressedSwitch = "cancel";
+        } else {
+            for (const auto& switchPin : moveBottons) {
+                if (digitalRead(switchPin.second.pin) == LOW) {
+                    currentPressedSwitch = switchPin.first;
+                    break;
+                }
+            }
+        }
+
+        if (currentPressedSwitch != lastPressedSwitch) {
+            // 新しいスイッチが押された場合
+            lastDebounceTime = currentTime;
+            pressStartTime = currentTime;
+            lastPressedSwitch = currentPressedSwitch;
+            if (!currentPressedSwitch.empty()) {
+                return currentPressedSwitch;
+            }
+        } else if (!lastPressedSwitch.empty() && (currentTime - pressStartTime) > longPressTime) {
+            // 長押し時のリピート処理
+            if ((currentTime - lastDebounceTime) > repeatInterval) {
+                lastDebounceTime = currentTime;
+                return lastPressedSwitch;
+            }
+        } else if (lastPressedSwitch.empty()) {
+            // スイッチが離された場合
+            return lastPressedSwitch;
+        }
+    }
+
+    // スイッチが押されていない場合またはチャタリング防止期間中
+    return "";
+}
+
+void controller_setup() {
+    M5.Power.begin(); // バッテリーの初期化
+    M5.begin();       // M5Stackの初期化
+
+    setupSwitchPins();
+
+    // 画面をクリアして、初期メッセージを表示
+    M5.Lcd.clear();
+    M5.Lcd.setCursor(0, 0);
+    M5.Lcd.setTextSize(2);
+    M5.Lcd.print("Switch States:");
+}
+
+void controller_loop() {
+    std::string pressedSwitch = getPressedSwitch();
+
+    // 画面がチカチカしないように、スイッチの状態が変わったときのみ画面を更新
+    static std::string lastDisplayedSwitch = "";
+    if (pressedSwitch != lastDisplayedSwitch) {
+        M5.Lcd.clear();
+        M5.Lcd.setCursor(0, 0);
+        M5.Lcd.setTextSize(2);
+        if (!pressedSwitch.empty()) {
+            M5.Lcd.print("Switch Pressed: ");
+            M5.Lcd.print(pressedSwitch.c_str());
+        } else {
+            M5.Lcd.print("No Switch Pressed");
+        }
+        lastDisplayedSwitch = pressedSwitch;
+    }
+
+    delay(10); // 状態更新のために少し待つ
+}

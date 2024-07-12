@@ -1,59 +1,103 @@
 #include "controller.h"
 
 // グローバル変数の実体定義
-std::map<std::string, pinStates> switchPins;
-std::map<int, int> switchState;
+std::map<std::string, pinStates> moveBottons;
+std::map<std::string, pinStates> actionBottons;
+std::map<std::string, bool> rotaryBotton;
 ESP32Encoder encoder;
-std::string lastPressedSwitch = "";
-unsigned long lastDebounceTime = 0; // デバウンス用のタイムスタンプ
-const unsigned long debounceDelay = 50; // デバウンスの遅延時間（ミリ秒）
+
+int oldEncoderPosition  = -999;
+//int testCnt  = 0;
 
 void setupSwitchPins() {
     // ピンの番号・状態を、役割をキーとして辞書登録
-    switchPins["up"] = {3, LOW};       // up
-    switchPins["down"] = {1, LOW};     // down
-    switchPins["left"] = {16, LOW};    // left
-    switchPins["right"] = {17, LOW};   // right
-    switchPins["on"] = {2, LOW};       // on
-    switchPins["off"] = {5, LOW};      // off
+    moveBottons["up"] = {3, false};       // up
+    moveBottons["down"] = {1, false};     // down
+    moveBottons["left"] = {16, false};    // left
+    moveBottons["right"] = {17, false};   // right
+    actionBottons["select"] = {2, false};       // on
+    actionBottons["cancel"] = {5, false};      // off
+    rotaryBotton["turnRight"] = false;
+    rotaryBotton["turnLeft"] = false;
 
     // 各スイッチピンを入力モードに設定し、内部プルアップ抵抗を有効にする
-    for (const auto& switchPin : switchPins) {
-        pinMode(switchPin.second.number, INPUT_PULLUP);
+    for (const auto& moveBotton : moveBottons) {
+        pinMode(moveBotton.second.pin, INPUT_PULLUP);
     }
+    // 各スイッチピンを入力モードに設定し、内部プルアップ抵抗を有効にする
+    for (const auto& actionBotton : actionBottons) {
+        pinMode(actionBotton.second.pin, INPUT_PULLUP);
+    }
+
+    pinMode(35, INPUT_PULLUP); // 内部プルアップ抵抗の設定
+    pinMode(36, INPUT_PULLUP); // 内部プルアップ抵抗の設定
+
+    // エンコーダの初期化
+    encoder.attachSingleEdge(35, 36); // A相とB相のピンを指定
+    encoder.clearCount(); // カウンタの初期化
 }
 
-std::string getPressedSwitch() {
-    static std::string lastSwitch = "";
-    static unsigned long lastDebounceTime = 0; // デバウンス用のタイムスタンプ
-
-    std::string pressedSwitch = "";
-    unsigned long currentTime = millis(); // 現在の時間を取得
-
-    for (const auto& switchPin : switchPins) {
-        int reading = digitalRead(switchPin.second.number);
-        if (reading == LOW) {
-            if (pressedSwitch.empty()) {
-                pressedSwitch = switchPin.first;
-            } else {
-                // 同時押しが発生した場合、前回の状態を維持
-                return lastSwitch;
-            }
+void checkSwitches() {
+    for (auto& moveBotton : moveBottons){
+        if (digitalRead(moveBotton.second.pin) == LOW) {
+            moveBotton.second.state = true;
+        } else {
+            moveBotton.second.state = false;
+        }
+    }
+    for (auto& actionBotton : actionBottons){
+        if (digitalRead(actionBotton.second.pin) == LOW) {
+            actionBotton.second.state = true;
+        } else {
+            actionBotton.second.state = false;
         }
     }
 
-    if (pressedSwitch != lastSwitch) {
-        lastDebounceTime = currentTime; // 最後の状態変化の時間を記録
+    long encoderPosition = encoder.getCount();
+    if (encoderPosition > oldEncoderPosition){
+        rotaryBotton["turnRight"] = true;
+        rotaryBotton["turnLeft"] = false;
+        //testCnt++;
+    } else if (encoderPosition < oldEncoderPosition) {
+        rotaryBotton["turnRight"] = false;
+        rotaryBotton["turnLeft"] = true;
+        //testCnt--;
+    } else {
+        rotaryBotton["turnRight"] = false;
+        rotaryBotton["turnLeft"] = false;
+    }
+    oldEncoderPosition = encoderPosition;
+}
+
+void displaySwitchStates() {
+    // M5.Lcd.clear();
+    M5.Lcd.setCursor(0, 0);
+    // M5.Lcd.setTextSize(2);
+    
+    // Move Buttons
+    M5.Lcd.print("Move Buttons:\n");
+    for (const auto& moveBotton : moveBottons) {
+        M5.Lcd.print(moveBotton.first.c_str());
+        M5.Lcd.print(": ");
+        M5.Lcd.println(moveBotton.second.state ? "Pressed" : "Released");
     }
 
-    if ((currentTime - lastDebounceTime) > debounceDelay) {
-        if (pressedSwitch != lastSwitch) {
-            lastSwitch = pressedSwitch;
-            return pressedSwitch;
-        }
+    // Action Buttons
+    M5.Lcd.print("Action Buttons:\n");
+    for (const auto& actionBotton : actionBottons) {
+        M5.Lcd.print(actionBotton.first.c_str());
+        M5.Lcd.print(": ");
+        M5.Lcd.println(actionBotton.second.state ? "Pressed" : "Released");
     }
 
-    return lastSwitch; // どのスイッチも押されていない場合または状態が変わらない場合
+    // Rotary Buttons
+    M5.Lcd.print("Rotary Buttons:\n");
+    for (const auto& rotary : rotaryBotton) {
+        M5.Lcd.print(rotary.first.c_str());
+        M5.Lcd.print(": ");
+        M5.Lcd.println(rotary.second ? "Active" : "Inactive");
+        //M5.Lcd.println(testCnt);
+    }
 }
 
 void controller_setup() {
@@ -70,22 +114,7 @@ void controller_setup() {
 }
 
 void controller_loop() {
-    std::string pressedSwitch = getPressedSwitch();
-
-    // 画面がチカチカしないように、スイッチの状態が変わったときのみ画面を更新
-    static std::string lastDisplayedSwitch = "";
-    if (pressedSwitch != lastDisplayedSwitch) {
-        M5.Lcd.clear();
-        M5.Lcd.setCursor(0, 0);
-        M5.Lcd.setTextSize(2);
-        if (!pressedSwitch.empty()) {
-            M5.Lcd.print("Switch Pressed: ");
-            M5.Lcd.print(pressedSwitch.c_str());
-        } else {
-            M5.Lcd.print("No Switch Pressed");
-        }
-        lastDisplayedSwitch = pressedSwitch;
-    }
-
+    checkSwitches();
+    displaySwitchStates();
     delay(100); // 状態更新のために少し待つ
 }
