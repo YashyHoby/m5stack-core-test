@@ -1,7 +1,3 @@
-#include <M5Stack.h>    // M5Stackライブラリを使いますという宣言です。Core2の場合はM5Core2.hです
-//#include <Encoder.h>
-#include <ESP32Encoder.h>
-
 #include "rotary_encoder_test.h"
 
 // エンコーダオブジェクトの作成

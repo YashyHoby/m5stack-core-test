@@ -6,23 +6,26 @@
 #include <string>
 #include <ESP32Encoder.h>
 
+// pinStates 構造体の宣言
 struct pinStates {
     int pin;
     bool state;
 };
 
 // グローバル変数の宣言
-extern std::map<std::string, pinStates> switchPins;
-extern std::map<int, int> switchState;
+extern std::map<std::string, pinStates> moveBottons;
+extern std::map<std::string, pinStates> actionBottons;
+extern std::map<std::string, bool> rotaryBotton;
 extern ESP32Encoder encoder;
-extern std::string lastPressedSwitch;
-extern unsigned long lastDebounceTime;
-extern const unsigned long debounceDelay;
 
-// 関数のプロトタイプ宣言
+extern int oldEncoderPosition;
+// extern int testCnt;
+
+// 関数の宣言
 void setupSwitchPins();
+void updateSwitches();
+void displaySwitchStates();
 void controller_setup();
 void controller_loop();
-std::string getPressedSwitch();
 
 #endif // CONTROLLER_H

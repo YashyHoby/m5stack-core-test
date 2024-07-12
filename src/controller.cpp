@@ -4,6 +4,7 @@
 std::map<std::string, pinStates> moveBottons;
 std::map<std::string, pinStates> actionBottons;
 std::map<std::string, bool> rotaryBotton;
+isMove = false;
 ESP32Encoder encoder;
 
 int oldEncoderPosition  = -999;
@@ -37,7 +38,7 @@ void setupSwitchPins() {
     encoder.clearCount(); // カウンタの初期化
 }
 
-void checkSwitches() {
+void updateSwitches() {
     for (auto& moveBotton : moveBottons){
         if (digitalRead(moveBotton.second.pin) == LOW) {
             moveBotton.second.state = true;
@@ -114,7 +115,7 @@ void controller_setup() {
 }
 
 void controller_loop() {
-    checkSwitches();
+    updateSwitches();
     displaySwitchStates();
     delay(100); // 状態更新のために少し待つ
 }
