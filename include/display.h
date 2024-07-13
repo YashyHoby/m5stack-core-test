@@ -18,8 +18,13 @@ struct GridSquare {
 // 定数の宣言
 const int gridSize = 25; // 正方形のサイズ（ピクセル単位）
 const int gridSpacing = 5; // 正方形間の間隔（ピクセル単位）
-const int rows = 9;      // 行数
-const int cols = 9;      // 列数
+const int rows = 7;      // 行数
+const int cols = 11;      // 列数
+
+// ディスプレイサイズ（M5Stackのディスプレイサイズは320x240ピクセル）
+const int displayWidth = 320;
+const int displayHeight = 240;
+
 
 // グリッドデータを格納する配列の宣言
 extern GridSquare gridData[rows][cols];

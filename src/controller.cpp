@@ -4,7 +4,6 @@
 std::map<std::string, pinStates> moveBottons;
 std::map<std::string, pinStates> actionBottons;
 std::map<std::string, bool> rotaryBotton;
-isMove = false;
 ESP32Encoder encoder;
 
 int oldEncoderPosition  = -999;
