@@ -1,7 +1,6 @@
 #include "display.h"
 #include "controller.h"
-#include <FS.h>
-#include <SPIFFS.h>
+
 
 // グローバル変数の定義
 int cursorX = 0;         // カーソルのX座標

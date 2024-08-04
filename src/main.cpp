@@ -8,9 +8,11 @@
 
 
 void setup() {
-    controller_setup();  // 選択したプログラムのsetup関数を呼び出す
+    //controller_setup();  // 選択したプログラムのsetup関数を呼び出す
+    display_setup();
 }
 
 void loop() {
-    controller_loop();  // 選択したプログラムのloop関数を呼び出す
+    //controller_loop();  // 選択したプログラムのloop関数を呼び出す
+    display_loop();
 }
