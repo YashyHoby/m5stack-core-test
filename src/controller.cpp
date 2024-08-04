@@ -9,6 +9,7 @@ ESP32Encoder encoder;
 int oldEncoderPosition  = -999;
 //int testCnt  = 0;
 
+
 void setupSwitchPins() {
     // ピンの番号・状態を、役割をキーとして辞書登録
     moveBottons["up"] = {3, false};       // up
