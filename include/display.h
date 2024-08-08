@@ -2,50 +2,34 @@
 #define DISPLAY_H
 
 #include <M5Stack.h>
-#include <FS.h>
-#include <SPIFFS.h>
-#include "controller.h"
 
-// グリッドの位置とカラーを格納する構造体
-struct GridSquare {
-    int x;
-    int y;
-    uint8_t r;
-    uint8_t g;
-    uint8_t b;
-};
-
-// 定数の宣言
-const int gridSize = 25; // 正方形のサイズ（ピクセル単位）
-const int gridSpacing = 5; // 正方形間の間隔（ピクセル単位）
-const int rows = 7;      // 行数
-const int cols = 11;      // 列数
-
-// ディスプレイサイズ（M5Stackのディスプレイサイズは320x240ピクセル）
+// グリッドサイズや行列の定義
+const int rows = 7;
+const int cols = 11;
+const int gridSize = 20;
+const int gridSpacing = 5;
 const int displayWidth = 320;
 const int displayHeight = 240;
 
-
-// グリッドデータを格納する配列の宣言
-extern GridSquare gridData[rows][cols];
-
-// カラーデータ
-const uint8_t colorData[rows][cols][3] = {
-    { {255, 0, 0}, {255, 64, 0}, {255, 128, 0}, {255, 192, 0}, {255, 255, 0}, {192, 255, 0}, {128, 255, 0}, {64, 255, 0}, {0, 255, 0}, {0, 255, 64}, {0, 255, 128} },
-    { {255, 0, 64}, {255, 64, 64}, {255, 128, 64}, {255, 192, 64}, {255, 255, 64}, {192, 255, 64}, {128, 255, 64}, {64, 255, 64}, {0, 255, 64}, {0, 255, 128}, {0, 255, 192} },
-    { {255, 0, 128}, {255, 64, 128}, {255, 128, 128}, {255, 192, 128}, {255, 255, 128}, {192, 255, 128}, {128, 255, 128}, {64, 255, 128}, {0, 255, 128}, {0, 255, 192}, {0, 255, 255} },
-    { {255, 0, 192}, {255, 64, 192}, {255, 128, 192}, {255, 192, 192}, {255, 255, 192}, {192, 255, 192}, {128, 255, 192}, {64, 255, 192}, {0, 255, 192}, {0, 255, 255}, {64, 255, 255} },
-    { {255, 0, 255}, {255, 64, 255}, {255, 128, 255}, {255, 192, 255}, {255, 255, 255}, {192, 255, 255}, {128, 255, 255}, {64, 255, 255}, {0, 255, 255}, {64, 255, 255}, {128, 255, 255} },
-    { {192, 0, 255}, {192, 64, 255}, {192, 128, 255}, {192, 192, 255}, {192, 255, 255}, {128, 255, 255}, {64, 255, 255}, {0, 255, 255}, {0, 192, 255}, {0, 128, 255}, {0, 64, 255} },
-    { {128, 0, 255}, {128, 64, 255}, {128, 128, 255}, {128, 192, 255}, {128, 255, 255}, {64, 255, 255}, {0, 255, 255}, {0, 192, 255}, {0, 128, 255}, {0, 64, 255}, {0, 0, 255} }
+// グリッドデータ構造の定義
+struct GridSquare {
+    int x, y;
+    uint8_t r, g, b;
 };
 
+// 外部からアクセス可能なグローバル変数の宣言
+extern int cursorX;
+extern int cursorY;
+extern int selectedX;
+extern int selectedY;
+
 // 関数の宣言
-void initializeGridData();
-void moveCursor();
-void selectSquare();
-void drawGrid();
 void display_setup();
 void display_loop();
+void initializeGridData();
+bool moveCursor(); // 戻り値をboolに変更
+bool selectSquare(); // 戻り値をboolに変更
+void drawGrid();
+void drawThickRect(int x, int y, int w, int h, uint16_t color, int thickness);
 
 #endif // DISPLAY_H

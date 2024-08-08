@@ -1,7 +1,6 @@
 #include "display.h"
 #include "controller.h"
 
-
 // グローバル変数の定義
 int cursorX = 0;         // カーソルのX座標
 int cursorY = 0;         // カーソルのY座標
@@ -13,8 +12,18 @@ unsigned long lastMoveTime = 0;
 unsigned long pressStartTime = 0;
 bool isPressing = false;
 
+// 前回のボタン状態を保持する変数
+bool lastUpState = false;
+bool lastDownState = false;
+bool lastLeftState = false;
+bool lastRightState = false;
+bool lastSelectState = false;
+
 // グリッドデータを格納する配列の宣言
 GridSquare gridData[rows][cols];
+
+// オフスクリーンバッファの宣言
+TFT_eSprite buffer = TFT_eSprite(&M5.Lcd);
 
 // カラフルなグラデーションデータを初期化する関数
 void initializeGridData() {
@@ -37,8 +46,9 @@ void initializeGridData() {
 }
 
 // カーソルを移動する関数
-void moveCursor() {
+bool moveCursor() {
     unsigned long currentTime = millis();
+    bool moved = false;
 
     // 長押し処理
     if (moveBottons["up"].state || moveBottons["down"].state || moveBottons["left"].state || moveBottons["right"].state) {
@@ -50,12 +60,16 @@ void moveCursor() {
         if ((currentTime - pressStartTime > 800) && (currentTime - lastMoveTime > 200)) {
             if (moveBottons["up"].state && cursorY > 0) {
                 cursorY--;
+                moved = true;
             } else if (moveBottons["down"].state && cursorY < rows - 1) {
                 cursorY++;
+                moved = true;
             } else if (moveBottons["left"].state && cursorX > 0) {
                 cursorX--;
+                moved = true;
             } else if (moveBottons["right"].state && cursorX < cols - 1) {
                 cursorX++;
+                moved = true;
             }
             lastMoveTime = currentTime;
         }
@@ -68,36 +82,50 @@ void moveCursor() {
         if (moveBottons["up"].state && cursorY > 0) {
             cursorY--;
             lastMoveTime = currentTime;
+            moved = true;
         } else if (moveBottons["down"].state && cursorY < rows - 1) {
             cursorY++;
             lastMoveTime = currentTime;
+            moved = true;
         } else if (moveBottons["left"].state && cursorX > 0) {
             cursorX--;
             lastMoveTime = currentTime;
+            moved = true;
         } else if (moveBottons["right"].state && cursorX < cols - 1) {
             cursorX++;
             lastMoveTime = currentTime;
+            moved = true;
         }
     }
+
+    return moved;
 }
 
 // カーソルがある位置の正方形を選択する関数
-void selectSquare() {
-    if (actionBottons["select"].state) {
+bool selectSquare() {
+    if (actionBottons["select"].state && !lastSelectState) {
         selectedX = cursorX;
         selectedY = cursorY;
+        lastSelectState = actionBottons["select"].state;
+        return true;
     }
+    lastSelectState = actionBottons["select"].state;
+    return false;
 }
 
 // 太い線を描画する関数
 void drawThickRect(int x, int y, int w, int h, uint16_t color, int thickness) {
     for (int i = 0; i < thickness; i++) {
-        M5.Lcd.drawRect(x + i, y + i, w - (2 * i), h - (2 * i), color);
+        buffer.drawRect(x + i, y + i, w - (2 * i), h - (2 * i), color);
     }
 }
 
 // グリッドを描画する関数
 void drawGrid() {
+    // オフスクリーンバッファの初期化
+    buffer.createSprite(displayWidth, displayHeight);
+    buffer.fillScreen(TFT_BLACK);
+
     // 画面の中央にグリッドを配置するためのオフセットを計算
     int totalGridWidth = cols * (gridSize + gridSpacing) - gridSpacing;
     int totalGridHeight = rows * (gridSize + gridSpacing) - gridSpacing;
@@ -108,10 +136,10 @@ void drawGrid() {
     for (int y = 0; y < rows; y++) {
         for (int x = 0; x < cols; x++) {
             GridSquare& square = gridData[y][x];
-            uint16_t color = M5.Lcd.color565(square.r, square.g, square.b);
+            uint16_t color = buffer.color565(square.r, square.g, square.b);
             int posX = offsetX + x * (gridSize + gridSpacing);
             int posY = offsetY + y * (gridSize + gridSpacing);
-            M5.Lcd.fillRect(posX, posY, gridSize, gridSize, color);
+            buffer.fillRect(posX, posY, gridSize, gridSize, color);
             drawThickRect(posX - 1, posY - 1, gridSize + 2, gridSize + 2, TFT_BLACK, borderThickness); // 線の太さを指定
         }
     }
@@ -119,6 +147,12 @@ void drawGrid() {
     int cursorPosX = offsetX + cursorX * (gridSize + gridSpacing);
     int cursorPosY = offsetY + cursorY * (gridSize + gridSpacing);
     drawThickRect(cursorPosX - 1, cursorPosY - 1, gridSize + 2, gridSize + 2, TFT_WHITE, borderThickness); // 線の太さを指定
+
+    // オフスクリーンバッファから画面に転送
+    buffer.pushSprite(0, 0);
+
+    // バッファを削除
+    buffer.deleteSprite();
 }
 
 // ディスプレイの初期設定を行う関数
@@ -139,8 +173,11 @@ void display_setup() {
 // ディスプレイのループ処理を行う関数
 void display_loop() {
     updateSwitches(); // スイッチの状態を更新
-    moveCursor();     // カーソルを移動
-    selectSquare();   // カーソル位置の正方形を選択
-    drawGrid();       // グリッドを描画
+
+    // カーソル移動または正方形選択が発生した場合のみ画面を更新
+    if (moveCursor() || selectSquare()) {
+        drawGrid();       // グリッドを描画
+    }
+
     delay(100);       // 状態更新のために少し待つ
 }
